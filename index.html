@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Handover Visualization – Figure 4 Style</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { background: #0f172a; color: #e5e7eb; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+    .wrapper { background: #020617; border-radius: 16px; padding: 16px 18px 18px; box-shadow: 0 20px 40px rgba(0,0,0,0.6); max-width: 1180px; width: 100%; display: flex; gap: 12px; }
+    .left-pane { flex: 1 1 auto; }
+    .right-pane { width: 180px; font-size: 12px; display: flex; flex-direction: column; gap: 6px; padding-top: 30px; }
+    #hud { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 16px; flex-wrap: wrap; font-size: 14px; }
+    #hud-left { display: flex; flex-direction: column; gap: 4px; }
+    #currentNetwork { font-size: 15px; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 999px; font-size: 12px; background: rgba(15,118,110,.1); border: 1px solid rgba(45,212,191,.4); color: #a5f3fc; }
+    #instructions { font-size: 12px; color: #9ca3af; margin-top: 4px; max-width: 620px; }
+    #controls { margin-top: 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; }
+    #controls select, #controls button { background: #020617; color: #e5e7eb; border-radius: 999px; border: 1px solid rgba(148,163,184,.7); padding: 4px 10px; font-size: 12px; cursor: pointer; }
+    #controls button:hover { border-color: #e5e7eb; }
+    #speedInfo { font-size: 11px; color: #9ca3af; }
+    #game { position: relative; width: 900px; max-width: 100%; height: 460px; margin-top: 8px; border-radius: 14px; overflow: hidden; background: radial-gradient(circle at 50% 50%, rgba(15,23,42,1), rgba(15,23,42,1)); border: 1px solid rgba(148,163,184,.4); }
+    #lteLabel { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); font-size: 11px; text-transform: uppercase; letter-spacing: .09em; color: rgba(191,219,254,.9); padding: 2px 10px; border-radius: 999px; background: rgba(15,23,42,.85); border: 1px solid rgba(59,130,246,.7); }
+    #mtPath { position: absolute; left: 0; right: 0; top: 50%; height: 2px; background: #000; transform: translateY(-50%); }
+    .cell { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 11px; pointer-events: none; transition: box-shadow .18s ease, border-color .18s ease, transform .18s ease; background: transparent; }
+    .cell-label { position: absolute; font-size: 10px; color: #e5e7eb; background: rgba(15,23,42,.8); padding: 1px 4px; border-radius: 4px; transform: translate(-50%, -50%); pointer-events: none; white-space: nowrap; }
+    .cell.active { box-shadow: 0 0 18px rgba(250,250,250,.45); transform: scale(1.03); }
+    #car { position: absolute; width: 36px; height: 20px; background: #38bdf8; border-radius: 5px; box-shadow: 0 4px 8px rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; transform-origin: center; }
+    #car::before, #car::after { content: ""; position: absolute; width: 9px; height: 4px; background: #020617; border-radius: 999px; bottom: -4px; }
+    #car::before { left: 5px; } #car::after { right: 5px; }
+    .car-window { width: 60%; height: 45%; background: rgba(15,23,42,.9); border-radius: 4px; }
+    #hint { position: absolute; bottom: 6px; right: 10px; font-size: 11px; color: #9ca3af; background: rgba(15,23,42,.9); padding: 3px 8px; border-radius: 999px; border: 1px solid rgba(148,163,184,.45); }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-line { width: 26px; height: 0; border-top: 2px dashed; }
+    .lte-line { border-color: #60a5fa; } .w1 { border-color: #f97316; } .w2 { border-color: #22c55e; } .w3 { border-color: #e11d48; } .w4 { border-color: #a855f7; } .w5 { border-color: #14b8a6; } .w6 { border-color: #eab308; } .g1 { border-color: #38bdf8; } .g2 { border-color: #facc15; } .g3 { border-color: #a3e635; } .mt-line { border-color: #9ca3af; border-style: solid; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="left-pane">
+      <div id="hud">
+        <div id="hud-left">
+          <div id="currentNetwork">Current Network: <span class="badge"><span id="networkName">LTE (macro)</span></span></div>
+          <div>Handovers: <span id="handoverCount">0</span></div>
+          <div id="instructions">Select a speed, preference and dwell mode, then press <strong>Start</strong>. The car (MT) moves along the horizontal line. It only hands over to WLAN/5G when the algorithm decides based on your selected settings.</div>
+          <div id="controls">
+            <span>Speed:</span>
+            <select id="speedSelect">
+              <option value="40">40 km/h</option><option value="50">50 km/h</option><option value="60">60 km/h</option>
+              <option value="70" selected>70 km/h</option><option value="80">80 km/h</option><option value="90">90 km/h</option><option value="100">100 km/h</option>
+            </select>
+
+            <span>Preference:</span>
+            <select id="prefSelect">
+              <option value="QoS" selected>QoS (5G → LTE)</option>
+              <option value="Cost">Cost (WLAN → LTE)</option>
+            </select>
+
+            <button id="dwellBtn">Dwell: ON (≥ 2 s)</button>
+            <button id="startBtn">Start</button>
+            <button id="resetBtn">Reset</button>
+            <span id="speedInfo"></span>
+          </div>
+        </div>
+      </div>
+
+      <div id="game">
+        <div id="lteLabel">LTE Macro Cell – Default Network</div>
+        <div id="mtPath"></div>
+        <div id="car"><div class="car-window"></div></div>
+        <div id="hint">MT path (horizontal). Toggle dwell to see effect on handovers.</div>
+      </div>
+    </div>
+
+    <div class="right-pane">
+      <div class="legend-item"><span class="legend-line w1"></span><span>WLAN#1</span></div>
+      <div class="legend-item"><span class="legend-line w2"></span><span>WLAN#2</span></div>
+      <div class="legend-item"><span class="legend-line w3"></span><span>WLAN#3</span></div>
+      <div class="legend-item"><span class="legend-line w4"></span><span>WLAN#4</span></div>
+      <div class="legend-item"><span class="legend-line w5"></span><span>WLAN#5</span></div>
+      <div class="legend-item"><span class="legend-line w6"></span><span>WLAN#6</span></div>
+      <div class="legend-item"><span class="legend-line g1"></span><span>5G#1</span></div>
+      <div class="legend-item"><span class="legend-line g2"></span><span>5G#2</span></div>
+      <div class="legend-item"><span class="legend-line g3"></span><span>5G#3</span></div>
+      <div class="legend-item"><span class="legend-line mt-line"></span><span>MT</span></div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const game = document.getElementById("game");
+      const car = document.getElementById("car");
+      const networkNameEl = document.getElementById("networkName");
+      const handoverCountEl = document.getElementById("handoverCount");
+      const speedSelect = document.getElementById("speedSelect");
+      const prefSelect = document.getElementById("prefSelect");
+      const dwellBtn = document.getElementById("dwellBtn");
+      const startBtn = document.getElementById("startBtn");
+      const resetBtn = document.getElementById("resetBtn");
+      const speedInfo = document.getElementById("speedInfo");
+
+      // ---- Parameters
+      const DWELL_THRESHOLD = 2; // seconds
+      const PIXELS_PER_KMH = 1.7;
+
+      // ---- State
+      let carX = 20;
+      let carY = 0;
+      let speedKmH = parseInt(speedSelect.value, 10) || 70;
+      let speedPxPerSec = speedKmH * PIXELS_PER_KMH;
+      let preference = prefSelect.value; // "QoS" or "Cost"
+      let useDwell = true;
+
+      // Track exact attachment so handovers count between cells of same type
+      let currentId = "LTE";                 // "LTE" or e.g., "wlan3"
+      let currentType = "LTE";               // "LTE" | "WLAN" | "5G"
+      let currentLabel = "LTE (macro)";
+      let handovers = 0;
+
+      let running = false;
+      let lastTime = null;
+
+      const midY = game.clientHeight / 2;
+
+      // ---- Cells layout
+      const cells = [
+        { id: "wlan1", type: "WLAN", label: "WLAN#1", x: 110, y: midY - 40, r: 90,  colorClass: "w1" },
+        { id: "wlan2", type: "WLAN", label: "WLAN#2", x: 220, y: midY + 90, r: 120, colorClass: "w2" },
+        { id: "wlan3", type: "WLAN", label: "WLAN#3", x: 250, y: midY - 150, r: 150, colorClass: "w3" },
+        { id: "wlan4", type: "WLAN", label: "WLAN#4", x: 430, y: midY + 60, r: 150, colorClass: "w4" },
+        { id: "wlan5", type: "WLAN", label: "WLAN#5", x: 610, y: midY - 80, r: 190, colorClass: "w5" },
+        { id: "wlan6", type: "WLAN", label: "WLAN#6", x: 770, y: midY + 40, r: 210, colorClass: "w6" },
+        { id: "fiveg1", type: "5G",   label: "5G#1",   x: 310, y: midY,      r: 95,  colorClass: "g1" },
+        { id: "fiveg2", type: "5G",   label: "5G#2",   x: 510, y: midY,      r: 95,  colorClass: "g2" },
+        { id: "fiveg3", type: "5G",   label: "5G#3",   x: 690, y: midY,      r: 95,  colorClass: "g3" },
+      ];
+
+      // ---- Draw cells + labels
+      cells.forEach(cfg => {
+        const div = document.createElement("div");
+        div.classList.add("cell");
+        div.style.width = `${cfg.r * 2}px`;
+        div.style.height = `${cfg.r * 2}px`;
+        div.style.left = `${cfg.x - cfg.r}px`;
+        div.style.top = `${cfg.y - cfg.r}px`;
+        div.style.border = `2px dashed`;
+        const colors = { w1:"#f97316", w2:"#22c55e", w3:"#e11d48", w4:"#a855f7", w5:"#14b8a6", w6:"#eab308", g1:"#38bdf8", g2:"#facc15", g3:"#a3e635" };
+        div.style.borderColor = colors[cfg.colorClass];
+        game.appendChild(div);
+        cfg.el = div;
+        cfg.timeInside = 0;
+        cfg.eligible = false;
+
+        const label = document.createElement("div");
+        label.classList.add("cell-label");
+        label.textContent = cfg.label;
+        label.style.left = `${cfg.x}px`;
+        label.style.top = `${cfg.y - cfg.r - 10}px`;
+        game.appendChild(label);
+        cfg.labelEl = label;
+      });
+
+      // ---- UI helpers
+      function updateSpeedInfo() {
+        const prefText = (preference === "QoS")
+          ? "Preference = QoS (5G → LTE)"
+          : "Preference = Cost (WLAN → LTE)";
+        const dwellText = useDwell ? "Dwell ON (≥ 2 s required)" : "Dwell OFF (instant handover)";
+        document.getElementById("speedInfo").textContent = `v = ${speedKmH} km/h | ${prefText} | ${dwellText}`;
+      }
+
+      function applyAttachment(id, type, label, countHandover = true) {
+        if (id !== currentId) {
+          if (countHandover) {
+            handovers += 1;
+            handoverCountEl.textContent = String(handovers);
+          }
+          currentId = id;
+          currentType = type;
+          currentLabel = label;
+          networkNameEl.textContent = (type === "LTE") ? "LTE (macro)" : `${type} – ${label}`;
+        }
+      }
+
+      function resetSimulation() {
+        // Position car
+        carY = midY - car.offsetHeight / 2;
+        carX = 10;
+        car.style.left = `${carX}px`;
+        car.style.top = `${carY}px`;
+
+        // Reset cells
+        cells.forEach(cfg => {
+          cfg.timeInside = 0;
+          cfg.eligible = false;
+          cfg.el.classList.remove("active");
+        });
+
+        // Reset attachment + HUD + counters
+        handovers = 0;
+        handoverCountEl.textContent = "0";
+        applyAttachment("LTE", "LTE", "LTE (macro)", /*countHandover*/ false);
+
+        running = false;
+        lastTime = null;
+      }
+
+      // ---- Controls
+      speedSelect.addEventListener("change", () => {
+        speedKmH = parseInt(speedSelect.value, 10);
+        speedPxPerSec = speedKmH * PIXELS_PER_KMH;
+        updateSpeedInfo();
+      });
+      prefSelect.addEventListener("change", () => { preference = prefSelect.value; updateSpeedInfo(); });
+      dwellBtn.addEventListener("click", () => {
+        useDwell = !useDwell;
+        dwellBtn.textContent = useDwell ? "Dwell: ON (≥ 2 s)" : "Dwell: OFF";
+        updateSpeedInfo();
+      });
+      startBtn.addEventListener("click", () => {
+        const maxX = game.clientWidth - car.offsetWidth - 10;
+        if (carX >= maxX) resetSimulation();
+        running = true;
+        lastTime = null;
+      });
+      resetBtn.addEventListener("click", resetSimulation);
+
+      // ---- Simulation steps
+      function updateCar(dtSec) {
+        const maxX = game.clientWidth - car.offsetWidth - 10;
+        carX += speedPxPerSec * dtSec;
+        if (carX > maxX) { carX = maxX; running = false; }
+        car.style.left = `${carX}px`;
+        car.style.top = `${carY}px`;
+      }
+
+      // Simple rule-set you requested:
+      // Cost: connect to WLAN if eligible, else LTE (ignore 5G)
+      // QoS:  connect to 5G  if eligible, else LTE
+      // Dwell: a cell becomes eligible only after >= DWELL_THRESHOLD seconds inside
+      function updateNetwork(dtSec) {
+        const carCenterX = carX + car.offsetWidth / 2;
+        const carCenterY = carY + car.offsetHeight / 2;
+
+        // Update each cell's dwell + eligibility
+        cells.forEach(cfg => {
+          const dx = carCenterX - cfg.x;
+          const dy = carCenterY - cfg.y;
+          const dist = Math.hypot(dx, dy);
+          const isInside = dist <= cfg.r;
+
+          cfg.el.classList.toggle("active", isInside);
+
+          if (isInside) cfg.timeInside += dtSec;
+          else cfg.timeInside = 0;
+
+          cfg.eligible = useDwell ? (isInside && cfg.timeInside >= DWELL_THRESHOLD) : isInside;
+        });
+
+        // Decide preferred type and pick first eligible of that type
+        const preferredType = (preference === "QoS") ? "5G" : "WLAN";
+        const preferredCell = cells.find(c => c.type === preferredType && c.eligible);
+
+        if (preferredCell) {
+          // Attach to preferred eligible cell
+          applyAttachment(preferredCell.id, preferredCell.type, preferredCell.label);
+        } else {
+          // Fallback to LTE
+          applyAttachment("LTE", "LTE", "LTE (macro)");
+        }
+      }
+
+      function loop(timestamp) {
+        if (!lastTime) lastTime = timestamp;
+        const dtSec = (timestamp - lastTime) / 1000;
+        lastTime = timestamp;
+
+        if (running) {
+          updateCar(dtSec);
+          updateNetwork(dtSec);
+        }
+        requestAnimationFrame(loop);
+      }
+
+      // ---- Init
+      resetSimulation();
+      updateSpeedInfo();
+      requestAnimationFrame(loop);
+    });
+  </script>
+</body>
+</html>
